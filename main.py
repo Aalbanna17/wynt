@@ -1,5 +1,6 @@
 #import uvicorn
 from fastapi import FastAPI , Request
+from fastapi.responses import JSONResponse
 from routers import cvextract
 import logging
 
@@ -17,10 +18,6 @@ if __name__ == "__main__":
 """
 
 @app.middleware("http")
-async def log_requests(request: Request, call_next):
-    logger.info(f"Request: {request.method} {request.url}")
-    logger.info(f"Request headers: {request.headers}")
-    response = await call_next(request)
-    logger.info(f"Response status: {response.status_code}")
-    logger.info(f"Response headers: {response.headers}")
-    return response
+async def block_all_requests(request: Request, call_next):
+    logger.info(f"Blocked request: {request.method} {request.url}")
+    return JSONResponse(status_code=403, content={"detail": "Access forbidden"})

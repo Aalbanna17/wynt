@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 LOG_STREAM_NAME = 'Store_Data'
 
-async def store_cv_data(session, cv_data, scorejson, scoren, resumeid, tenantId, profile_type, title_categories, jobid=None, candidate_id=None):
+async def store_cv_data(session, cv_data, scorecandidate_json,score_candidate,resumeid, tenantId, profile_type, title_categories, jobid=None, candidate_id=None):
     try:
         profile_id = await handle_talent_profile(session, cv_data, resumeid, tenantId, profiletype.Talent, title_categories)
         await process_education(session, cv_data, profile_id)
@@ -29,7 +29,7 @@ async def store_cv_data(session, cv_data, scorejson, scoren, resumeid, tenantId,
         await process_projects(session, cv_data, profile_id)
         await process_achievements(session, cv_data, profile_id)
         await process_certifications(session, cv_data, profile_id)
-        await process_evaluation(session, cv_data, scorejson, scoren, profile_id)
+        await process_evaluation_p(session,cv_data,profile_id)
         await update_talent_pools(session, tenantId)
         
         if profile_type == profiletype.Candidate:
@@ -40,7 +40,7 @@ async def store_cv_data(session, cv_data, scorejson, scoren, resumeid, tenantId,
             await process_projects(session, cv_data, profile_id)
             await process_achievements(session, cv_data, profile_id)
             await process_certifications(session, cv_data, profile_id)
-            await process_evaluation(session, cv_data, scorejson, scoren, profile_id)
+            await process_evaluation_c(session, cv_data, scorecandidate_json, score_candidate, profile_id)
             await update_job_and_candidate(session, jobid, tenantId, candidate_id, profile_id)
         
         return True
@@ -162,7 +162,7 @@ async def process_education(session, cv_data, profile_id):
         session.add(education)
     await session.commit()
 
-async def process_job_details(session, cv_data, profile_id):
+async def process_job_details(session,cv_data,profile_id):
     await session.execute(delete(talent_job_details_DB).where(talent_job_details_DB.profileId == profile_id))
     for job in cv_data.get('jobDetails', []):
         job_detail = talent_job_details_DB(
@@ -228,20 +228,29 @@ async def process_certifications(session, cv_data, profile_id):
         session.add(certification_entry)
     await session.commit()
 
-async def process_evaluation(session, cv_data, scorejson, scoren, profile_id):
+async def process_evaluation_p(session,cv_data,profile_id):
     await session.execute(delete(talent_evaluation_DB).where(talent_evaluation_DB.profileId == profile_id))
     evaluation = talent_evaluation_DB(
         profileId=profile_id,
-        score=scoren,
-        reason=scorejson.get('reason'),
-        recommendationsScore=json.dumps(scorejson.get('recommendationsScore')),
-        conclusion=scorejson.get('conclusion'),
         strengthPoints=json.dumps(cv_data.get('strengthPoints')),
         recommendationsCV=json.dumps(cv_data.get('recommendationsCv'))
     )
     session.add(evaluation)
     await session.commit()
 
+async def process_evaluation_c(session, cv_data, scorecandidate_json, score_candidate, profile_id):
+    await session.execute(delete(talent_evaluation_DB).where(talent_evaluation_DB.profileId == profile_id))
+    evaluation = talent_evaluation_DB(
+        profileId=profile_id,
+        score=score_candidate,
+        reason=scorecandidate_json.get('reason'),
+        recommendationsScore=json.dumps(scorecandidate_json.get('recommendationsScore')),
+        conclusion=scorecandidate_json.get('conclusion'),
+        strengthPoints=json.dumps(cv_data.get('strengthPoints')),
+        recommendationsCV=json.dumps(cv_data.get('recommendationsCv'))
+    )
+    session.add(evaluation)
+    await session.commit()
 
 async def update_talent_pools(session, tenantId):
     result = await session.execute(select(talent_pools_DB).filter_by(tenantId=tenantId).with_for_update())
@@ -306,4 +315,3 @@ async def get_title_category_id(session, title_categories):
     )
     title_category = result.scalars().first()
     return title_category.id if title_category else None
-

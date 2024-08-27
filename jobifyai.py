@@ -27,7 +27,7 @@ def process_gpt_4o_turbo(text, agent):
             n=1,
             stop=None,
         )
-        print(completion.choices[0].message.content)
+        #print(completion.choices[0].message.content)
         logger.info(f"completion.choices[0].message.content : {completion.choices[0].message.content}")
         completion_text = completion.choices[0].message.content
         if "```json" in completion_text and "```" in completion_text:

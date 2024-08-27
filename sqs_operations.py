@@ -43,7 +43,7 @@ async def process_sqs_messages():
                 try:
                     messagea = message['Body']
                     logger.debug(f"Raw message body: {messagea}")
-                    log_to_cloudwatch_logs(LOG_STREAM_NAME,f"Started processing message ID: {messagea}.")
+                    log_to_cloudwatch_logs(LOG_STREAM_NAME, f"Started processing message ID: {messagea}.")
 
                     body = json.loads(message['Body'])
                     receipt_handle = message['ReceiptHandle']
@@ -51,15 +51,21 @@ async def process_sqs_messages():
                     key = body['detail']['object']['key']
 
                     logger.info(f"Processing file: s3://{bucket}/{key}")
-                    log_to_cloudwatch_logs(LOG_STREAM_NAME,f"Processing file: s3://{bucket}/{key}")
-                    
-                    file_content, metadata = get_s3_object(bucket, key)
-                    extracted_text = extract_text_from_pdf(file_content)
-                    logger.info(f"Extracted text from {key}: {extracted_text[:100]}...")
+                    log_to_cloudwatch_logs(LOG_STREAM_NAME, f"Processing file: s3://{bucket}/{key}")
 
-                    await cvprocess(metadata, extracted_text)
+                    if key.endswith('resume.pdf'):
+                        file_content, metadata = get_s3_object(bucket, key)
+                        extracted_text = extract_text_from_pdf(file_content)
+                        logger.info(f"Extracted text from {key}: {extracted_text[:100]}...")
+                        await cvprocess(metadata, extracted_text)
+                    elif key.endswith('cv_data.json'):
+                        logger.info(f"Processing cv_data.json file: {key}")
+                    elif key.endswith('score.json'):
+                        logger.info(f"Processing score.json file: {key}")
+                    elif key.endswith('extracted_text.txt'):
+                        logger.info(f"Processing extracted_text.txt file: {key}")
 
-                    log_to_cloudwatch_logs(LOG_STREAM_NAME,f"Finished processing message ID: {messagea} successfully.")
+                    log_to_cloudwatch_logs(LOG_STREAM_NAME, f"Finished processing message ID: {messagea} successfully.")
 
                     sqs.delete_message(
                         QueueUrl=QUEUE_wynt_resumes,
@@ -69,17 +75,17 @@ async def process_sqs_messages():
 
                 except json.JSONDecodeError as e:
                     logger.error(f"Error parsing JSON for message ID: {messagea}: {str(e)}")
-                    log_to_cloudwatch_logs(LOG_STREAM_NAME,f"JSON error occurred while processing message ID: {messagea}.")
+                    log_to_cloudwatch_logs(LOG_STREAM_NAME, f"JSON error occurred while processing message ID: {messagea}.")
                 except ClientError as e:
                     logger.error(f"Error processing message ID: {messagea}: {str(e)}")
-                    log_to_cloudwatch_logs(LOG_STREAM_NAME,f"Client error occurred while processing message ID: {messagea}.")
+                    log_to_cloudwatch_logs(LOG_STREAM_NAME, f"Client error occurred while processing message ID: {messagea}.")
                 except Exception as e:
                     logger.error(f"Unexpected error during processing message ID: {messagea}: {str(e)}")
-                    log_to_cloudwatch_logs(LOG_STREAM_NAME,f"Unexpected error occurred while processing message ID: {messagea}.")
+                    log_to_cloudwatch_logs(LOG_STREAM_NAME, f"Unexpected error occurred while processing message ID: {messagea}.")
 
         except Exception as e:
             logger.error(f"Error in SQS processing loop: {str(e)}")
-            log_to_cloudwatch_logs(LOG_STREAM_NAME,"Error in the SQS processing loop.")
+            log_to_cloudwatch_logs(LOG_STREAM_NAME, "Error in the SQS processing loop.")
             await asyncio.sleep(1)
 
 #if __name__ == "__main__":
