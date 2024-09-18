@@ -125,7 +125,7 @@ async def process_specific_s3_objects():
 
 
 
-import asyncio
+#import asyncio
 
-if __name__ == '__main__':
-    asyncio.run(process_specific_s3_objects())
+#if __name__ == '__main__':
+#    asyncio.run(process_specific_s3_objects())

@@ -24,12 +24,13 @@ async def cvprocess(metadata, extracted_text):
     cv_data,title_categories,score_candidate ,score_candidate_j = await process_cv(extracted_text,jobid)
     cv_data = await json_load(cv_data)
     scorecandidate_json = await json_load(score_candidate_j)
-
-    asyncio.create_task(send_and_save_to_s3(cv_data,scorecandidate_json,extracted_text,resumeid,region='us-east-1'))
     
+    asyncio.create_task(send_and_save_to_s3(cv_data,scorecandidate_json,extracted_text,resumeid,region='us-east-1'))
+
     session = await get_database_session()
     try:
         success = await store_cv_data(session, cv_data, scorecandidate_json, score_candidate, resumeid, tenantId, profile_type, title_categories, jobid, candidate_id)
+        
         if not success:
             print("Failed to store CV data")
             logger.error("Failed to store CV data")
